@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ledger — Project Ops</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@400;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#12181F; --surface:#1B232D; --surface-2:#212B37; --line:#2C3947;
+    --gold:#C9A15C; --teal:#4A7A8C; --rose:#B5715F; --sage:#7C9070;
+    --blue:#6E8FB0; --purple:#8C7AA6; --ink:#E8E4DA; --muted:#8B94A0; --danger:#C1594F;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+
+  header{padding:24px 40px 18px;border-bottom:1px solid var(--line);
+    display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px;}
+  header h1{font-family:'Zilla Slab',serif;font-weight:700;font-size:26px;margin:0;color:var(--ink);}
+  header .rule{color:var(--gold);}
+  header .subtitle{color:var(--muted);font-size:12.5px;margin-top:4px;}
+  .head-right{display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+  .acting-as{display:flex;flex-direction:column;gap:4px;align-items:flex-end;}
+  .acting-as label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;}
+  .acting-as select{font-size:12px;padding:6px 8px;}
+  .clock{text-align:right;font-family:'JetBrains Mono',monospace;}
+  .clock .time{font-size:20px;color:var(--gold);letter-spacing:1px;}
+  .clock .date{font-size:11.5px;color:var(--muted);margin-top:2px;}
+
+  .stats{display:flex;gap:1px;background:var(--line);border-bottom:1px solid var(--line);flex-wrap:wrap;}
+  .stat{flex:1 1 140px;background:var(--bg);padding:14px 20px;}
+  .stat .n{font-family:'JetBrains Mono',monospace;font-size:22px;color:var(--gold);}
+  .stat .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-top:2px;}
+  .stat.alert .n{color:var(--danger);}
+
+  main{display:grid;grid-template-columns:1.25fr 0.75fr;gap:1px;background:var(--line);}
+  @media(max-width:920px){ main{grid-template-columns:1fr;} }
+  section.panel{background:var(--bg);padding:26px 40px;}
+  .panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+  .panel-head h2{font-family:'Zilla Slab',serif;font-weight:600;font-size:14px;text-transform:uppercase;letter-spacing:1.4px;margin:0;}
+  .panel-head .right{display:flex;align-items:center;gap:8px;}
+  .panel-head .count{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);}
+
+  .projects-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;}
+  .pill{padding:6px 12px;border-radius:20px;border:1px solid var(--line);background:var(--surface);
+    color:var(--muted);font-size:12px;cursor:pointer;white-space:nowrap;}
+  .pill.active{border-color:var(--gold);color:var(--gold);}
+  .add-project{display:flex;gap:6px;align-items:center;}
+  .add-project input{width:120px;padding:6px 8px;font-size:12px;}
+
+  .status-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
+  .chip{padding:5px 11px;border-radius:5px;border:1px solid var(--line);background:transparent;
+    color:var(--muted);font-size:11.5px;cursor:pointer;}
+  .chip.active{background:var(--surface-2);color:var(--ink);border-color:var(--gold);}
+
+  form.add-task{background:var(--surface);border:1px solid var(--line);border-radius:6px;
+    padding:16px;margin-bottom:24px;display:flex;flex-direction:column;gap:10px;}
+  .add-row{display:flex;gap:10px;flex-wrap:wrap;}
+  .add-row input, .add-row select, .add-row textarea{flex:1 1 140px;}
+  input,select,textarea{background:var(--surface-2);border:1px solid var(--line);color:var(--ink);
+    padding:9px 10px;border-radius:4px;font-family:'Inter',sans-serif;font-size:13px;}
+  textarea{resize:vertical;min-height:38px;font-family:'Inter',sans-serif;}
+  input[type=time],input[type=date]{font-family:'JetBrains Mono',monospace;}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--gold);outline-offset:1px;}
+  label.chk{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);white-space:nowrap;}
+  .btn{background:var(--gold);color:#1B1305;border:none;border-radius:4px;padding:10px 16px;
+    font-weight:600;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;transition:filter .15s ease;}
+  .btn:hover{filter:brightness(1.08);}
+  .btn.ghost{background:transparent;color:var(--gold);border:1px solid var(--gold);}
+  .btn.small{padding:6px 10px;font-size:12px;}
+  .btn:focus-visible, .icon-btn:focus-visible, .pill:focus-visible, .chip:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
+
+  .task{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border:1px solid var(--line);
+    border-radius:6px;margin-bottom:8px;background:var(--surface);flex-wrap:wrap;}
+  .task.overdue{border-color:var(--danger);}
+  .task.soon{border-color:var(--gold);}
+  .task.done{opacity:0.4;}
+  .task .time{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--gold);min-width:50px;padding-top:5px;}
+  .task.overdue .time{color:var(--danger);}
+  .task-main{flex:1;min-width:180px;}
+  .task-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .tag{font-size:10px;text-transform:uppercase;letter-spacing:0.6px;padding:3px 7px;border-radius:3px;font-weight:600;white-space:nowrap;}
+  .proj-tag{font-size:10px;color:var(--muted);border:1px solid var(--line);padding:2px 6px;border-radius:3px;}
+  .auth-tag{font-size:9px;color:var(--purple);border:1px solid var(--purple);padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:0.4px;}
+  .title{font-size:14px;margin-top:4px;}
+  .title.strike{text-decoration:line-through;color:var(--muted);}
+  .notes{font-size:12px;color:var(--muted);margin-top:3px;}
+  .party, .assignee{font-size:11px;color:var(--muted);margin-top:3px;}
+  .badge{font-size:10px;color:var(--danger);font-family:'JetBrains Mono',monospace;}
+  .task-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  select.status-select{font-size:11px;padding:5px 6px;}
+  .icon-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:4px 6px;border-radius:4px;line-height:1;}
+  .icon-btn:hover{color:var(--ink);background:var(--surface-2);}
+  .empty{color:var(--muted);font-size:13px;padding:20px 0;text-align:center;border:1px dashed var(--line);border-radius:6px;}
+
+  .sync-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .log-entry{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);}
+  .log-entry:last-child{border-bottom:none;}
+  .hash{color:var(--teal);font-family:'JetBrains Mono',monospace;font-size:12px;padding-top:2px;}
+  .log-body{flex:1;}
+  .log-msg{font-size:13px;}
+  .log-meta{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:2px;}
+  .status-line{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:14px;
+    padding-top:12px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--muted);display:inline-block;margin-right:6px;}
+  .dot.ok{background:var(--sage);} .dot.err{background:var(--danger);}
+
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50;padding:20px;}
+  .overlay.open{display:flex;}
+  .modal{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:28px;width:100%;max-width:440px;max-height:90vh;overflow:auto;}
+  .modal h3{font-family:'Zilla Slab',serif;margin:0 0 6px;font-size:19px;}
+  .modal p.hint{color:var(--muted);font-size:12px;margin:0 0 18px;line-height:1.5;}
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px;}
+  .field input, .field select{width:100%;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;}
+  .link-btn{background:none;border:none;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:12px;padding:0;}
+
+  .member-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);}
+  .member-row:last-child{border-bottom:none;}
+  .member-info{flex:1;}
+  .member-name{font-size:13px;}
+  .member-desig{font-size:11px;color:var(--muted);}
+  .team-list{margin-bottom:16px;max-height:200px;overflow:auto;}
+  .add-member-row{display:flex;gap:8px;flex-wrap:wrap;}
+  .add-member-row input, .add-member-row select{flex:1 1 100px;}
+
+  footer{padding:16px 40px 28px;color:var(--muted);font-size:11px;font-family:'JetBrains Mono',monospace;}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Ledger <span class="rule">·</span> Project Ops</h1>
+    <div class="subtitle">Documents, reviews, and follow-up calls — tracked by project and person, logged to GitHub.</div>
+  </div>
+  <div class="head-right">
+    <div class="acting-as">
+      <label for="actingAs">Acting as</label>
+      <select id="actingAs"><option value="">— none —</option></select>
+    </div>
+    <div class="clock">
+      <div class="time mono" id="clockTime">--:--:--</div>
+      <div class="date" id="clockDate">—</div>
+    </div>
+  </div>
+</header>
+
+<div class="stats" id="statsRow"></div>
+
+<main>
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Project Items</h2>
+      <div class="right">
+        <button class="pill" id="myTodoBtn" style="padding:6px 12px;">My To-Do</button>
+        <button class="icon-btn" id="openWorkload" title="Workload by person" aria-label="Workload by person">📊</button>
+        <button class="icon-btn" id="openTeam" title="Manage team" aria-label="Manage team">👤</button>
+        <span class="count" id="taskCount">0 open</span>
+      </div>
+    </div>
+
+    <div class="projects-row" id="projectsRow"></div>
+    <div class="status-row" id="statusRow"></div>
+
+    <form class="add-task" id="addForm">
+      <div class="add-row">
+        <input type="text" id="fTitle" placeholder="e.g. Design brief v2 — submit to client" required style="flex:2 1 220px;">
+        <select id="fProject"></select>
+      </div>
+      <div class="add-row">
+        <select id="fType">
+          <option>Document Submission</option>
+          <option>Review</option>
+          <option>Internal Review</option>
+          <option>Forwarding</option>
+          <option>Client Call</option>
+          <option>DEC Call</option>
+          <option>Meeting</option>
+          <option>Deadline</option>
+          <option>Other</option>
+        </select>
+        <input type="text" id="fParty" list="partyList" placeholder="Contact / party (optional)">
+        <datalist id="partyList">
+          <option value="Client"></option><option value="DEC"></option>
+          <option value="Internal"></option><option value="Vendor"></option>
+        </datalist>
+        <select id="fStatus">
+          <option>Pending</option><option>Submitted</option><option>In Review</option>
+          <option>Forwarded</option><option>Completed</option>
+        </select>
+      </div>
+      <div class="add-row">
+        <select id="fAssignee"><option value="">Assign to — optional</option></select>
+        <input type="date" id="fDate">
+        <input type="time" id="fTime" required>
+        <label class="chk"><input type="checkbox" id="fRecurring"> Repeats daily</label>
+      </div>
+      <div class="add-row">
+        <textarea id="fNotes" placeholder="Notes — doc name, version, what's pending, etc. (optional)"></textarea>
+      </div>
+      <div class="add-row">
+        <button type="submit" class="btn" style="margin-left:auto;">Add item</button>
+      </div>
+    </form>
+
+    <div id="taskList"></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Activity Log</h2>
+      <button class="icon-btn" id="openSettings" title="GitHub settings" aria-label="GitHub settings">⚙</button>
+    </div>
+
+    <div class="sync-row">
+      <button class="btn ghost small" id="syncBtn">Sync to GitHub</button>
+      <button class="btn ghost small" id="notifBtn">Enable reminders</button>
+    </div>
+
+    <div id="logList" style="margin-top:18px;"></div>
+    <div id="logEmpty" class="empty" style="display:none;">Completed items and logged calls will appear here, tagged with who did them.</div>
+
+    <div class="status-line">
+      <span><span class="dot" id="statusDot"></span><span id="statusText">Not connected to GitHub</span></span>
+      <span id="lastSynced"></span>
+    </div>
+  </section>
+</main>
+
+<footer>reminders check every 15s while this tab is open · data is stored privately to you, and only leaves the browser when you sync · this file has no login system — "Acting as" is self-reported, not enforced access control</footer>
+
+<!-- GITHUB SETTINGS MODAL -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h3>Connect GitHub</h3>
+    <p class="hint">Use a fine-grained personal access token scoped to <strong>one repo</strong> with <strong>Contents: read &amp; write</strong> permission. Stored only in your private artifact storage.</p>
+    <div class="field"><label for="gToken">Personal access token</label><input type="password" id="gToken" placeholder="github_pat_..."></div>
+    <div class="field"><label for="gOwner">Repo owner</label><input type="text" id="gOwner" placeholder="your-username"></div>
+    <div class="field"><label for="gRepo">Repo name</label><input type="text" id="gRepo" placeholder="activity-log"></div>
+    <div class="field"><label for="gPath">Snapshot file path</label><input type="text" id="gPath" placeholder="activity-log.json" value="activity-log.json"></div>
+    <div class="field"><label for="gLogsFolder">Daily logs folder</label><input type="text" id="gLogsFolder" placeholder="logs/" value="logs/"></div>
+    <div class="field"><label for="gBranch">Branch</label><input type="text" id="gBranch" placeholder="main" value="main"></div>
+    <div class="modal-actions">
+      <button class="link-btn" id="closeSettings">Cancel</button>
+      <button class="btn" id="saveSettings">Save settings</button>
+    </div>
+  </div>
+</div>
+
+<!-- TEAM MODAL -->
+<div class="overlay" id="teamOverlay">
+  <div class="modal">
+    <h3>Team</h3>
+    <p class="hint">Add the people working on these projects. "Authority" is a self-reported label for the log — this file has no real login, so it doesn't enforce permissions on its own; only who you're "Acting as" at the top decides what the app lets you edit here.</p>
+    <p class="hint" id="teamAdminNote" style="display:none;color:var(--gold);">Only someone acting as an Admin can add, remove, or re-rank team members.</p>
+    <div class="team-list" id="teamList"></div>
+    <div class="add-member-row" id="addMemberRow">
+      <input type="text" id="mName" placeholder="Name">
+      <input type="text" id="mDesig" placeholder="Designation (e.g. Design Engineer)">
+      <select id="mAuthority">
+        <option>Admin</option><option>Approver</option><option>Reviewer</option><option>Contributor</option><option>Viewer</option>
+      </select>
+      <button class="btn small" id="addMemberBtn">Add</button>
+    </div>
+    <div class="modal-actions">
+      <button class="link-btn" id="closeTeam">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- WORKLOAD MODAL -->
+<div class="overlay" id="workloadOverlay">
+  <div class="modal">
+    <h3>Workload by person</h3>
+    <p class="hint">Open items and what's been completed, per person, across all projects.</p>
+    <div class="team-list" id="workloadList"></div>
+    <div class="modal-actions">
+      <button class="link-btn" id="closeWorkload">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // This app was originally built for Claude's artifact sandbox, which provides a
+  // built-in `window.storage` API. A plain browser (e.g. GitHub Pages) doesn't have
+  // that API, so this shim reproduces it using localStorage. Data is per-browser/
+  // per-device only — see the README for how GitHub sync fits in.
+  window.storage = {
+    async get(key, shared){
+      const v = localStorage.getItem(key);
+      if(v === null) throw new Error('Key not found: ' + key);
+      return { key, value: v, shared: !!shared };
+    },
+    async set(key, value, shared){
+      localStorage.setItem(key, value);
+      return { key, value, shared: !!shared };
+    },
+    async delete(key, shared){
+      localStorage.removeItem(key);
+      return { key, deleted: true, shared: !!shared };
+    },
+    async list(prefix, shared){
+      const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix));
+      return { keys, prefix, shared: !!shared };
+    }
+  };
+</script>
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  let projects = [];
+  let tasks = [];
+  let log = [];
+  let team = [];
+  let ghConfig = null;
+  let actingAsId = '';
+  let notified = new Set();
+  let activeProject = 'all';
+  let activeStatus = 'all';
+  let myOnly = false;
+
+  const TYPE_META = {
+    'Document Submission': '#C9A15C', 'Review': '#4A7A8C', 'Internal Review': '#6E8FB0',
+    'Forwarding': '#7C9070', 'Client Call': '#B5715F', 'DEC Call': '#8C7AA6',
+    'Meeting': '#6E8FB0', 'Deadline': '#C1594F', 'Other': '#8B94A0'
+  };
+  const STATUSES = ['Pending','Submitted','In Review','Forwarded','Completed'];
+
+  const SEED_TEAM = [
+    {id:'seed1',  name:'Vinod Sharma',        designation:'Sr. Manager',                           authority:'Approver'},
+    {id:'seed2',  name:'Prasad Nayak',        designation:'Sr. Manager',                           authority:'Approver'},
+    {id:'seed3',  name:'Nagesh C.',           designation:'Lead - Mechanical',                     authority:'Approver'},
+    {id:'seed4',  name:'Lakshmikanthan C.',   designation:'Lead - Electrical & Instrumentation',   authority:'Approver'},
+    {id:'seed5',  name:'Pavan Kumar K S',     designation:'Lead - Civil',                          authority:'Approver'},
+    {id:'seed6',  name:'Pankaj Kumar',        designation:'Engineer - Piping',                     authority:'Contributor'},
+    {id:'seed7',  name:'Nikhil Wagh',         designation:'Engineer - Piping',                     authority:'Contributor'},
+    {id:'seed8',  name:'Indrani Dutta',       designation:'Engineer - Civil',                      authority:'Contributor'},
+    {id:'seed9',  name:'Ritesh Kumar',        designation:'Mechanical - GET',                      authority:'Contributor'},
+    {id:'seed10', name:'Vijay Chaudhari',     designation:'Designer / Draughtsman - Mechanical',   authority:'Contributor'},
+    {id:'seed11', name:'Tazim Solkar',        designation:'Designer / Draughtsman - Civil',        authority:'Contributor'},
+    {id:'seed12', name:'Nilesh Zambre',       designation:'Designer / Draughtsman - Piping',       authority:'Contributor'},
+    {id:'seed13', name:'Vaibhav Tawade',      designation:'Designer / Draughtsman - Mechanical',   authority:'Contributor'},
+    {id:'seed14', name:'Tabrez Mohammed',     designation:'Lead - Document Controller',            authority:'Approver'},
+    {id:'seed15', name:'Prasanna Arivalagan', designation:'Document Controller',                   authority:'Admin'},
+    {id:'seed16', name:'Vasanthakarthi N.',   designation:'Designer / Draughtsman - Piping',       authority:'Contributor'},
+    {id:'seed17', name:'M. Sundaravadivelu',  designation:'Designer / Draughtsman - Piping',       authority:'Contributor'},
+    {id:'seed18', name:'Prithiviraja AR.',    designation:'Designer / Draughtsman - Piping',       authority:'Contributor'},
+    {id:'seed19', name:'Prabhu',              designation:'Designer / Draughtsman - Piping',       authority:'Contributor'},
+    {id:'seed20', name:'S. Srinivas',         designation:'Electrical - GET',                      authority:'Contributor'}
+  ];
+
+  function todayStr(d=new Date()){
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+  function hexToRgba(hex, a){
+    const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+    return `rgba(${r},${g},${b},${a})`;
+  }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function shortHash(){
+    return Array.from({length:7}, ()=> '0123456789abcdef'[Math.floor(Math.random()*16)]).join('');
+  }
+  function memberById(id){ return team.find(m=>m.id===id); }
+  function isAdmin(){ const m = memberById(actingAsId); return !!m && m.authority === 'Admin'; }
+  function memberLabel(id){
+    const m = memberById(id);
+    return m ? `${m.name} (${m.designation||m.authority})` : null;
+  }
+
+  // ---------- storage ----------
+  async function saveProjects(){ try{ await window.storage.set('projects', JSON.stringify(projects), false); }catch(e){console.error(e);} }
+  async function saveTasks(){ try{ await window.storage.set('tasks', JSON.stringify(tasks), false); }catch(e){console.error(e);} }
+  async function saveLog(){ try{ await window.storage.set('activity-log', JSON.stringify(log), false); }catch(e){console.error(e);} }
+  async function saveTeam(){ try{ await window.storage.set('team', JSON.stringify(team), false); }catch(e){console.error(e);} }
+  async function saveActingAs(id){ try{ await window.storage.set('acting-as', id, false); }catch(e){console.error(e);} }
+  async function saveGhConfig(cfg){ try{ await window.storage.set('gh-config', JSON.stringify(cfg), false); }catch(e){console.error(e);} }
+
+  async function loadAll(){
+    try{ const p = await window.storage.get('projects', false); projects = p ? JSON.parse(p.value) : []; }catch(e){ projects = []; }
+    try{ const t = await window.storage.get('tasks', false); tasks = t ? JSON.parse(t.value) : []; }catch(e){ tasks = []; }
+    try{ const l = await window.storage.get('activity-log', false); log = l ? JSON.parse(l.value) : []; }catch(e){ log = []; }
+    let seededNow = false;
+    try{
+      const tm = await window.storage.get('team', false);
+      team = tm ? JSON.parse(tm.value) : [];
+      if(team.length === 0){ team = SEED_TEAM.slice(); await saveTeam(); seededNow = true; }
+    }catch(e){ team = SEED_TEAM.slice(); await saveTeam(); seededNow = true; }
+    try{
+      const a = await window.storage.get('acting-as', false);
+      actingAsId = a ? a.value : '';
+      if(!actingAsId && seededNow){
+        const admin = team.find(m=>m.authority==='Admin');
+        if(admin){ actingAsId = admin.id; await saveActingAs(actingAsId); }
+      }
+    }catch(e){ actingAsId = ''; }
+    try{ const g = await window.storage.get('gh-config', false); ghConfig = g ? JSON.parse(g.value) : null; }catch(e){ ghConfig = null; }
+    try{ const ls = await window.storage.get('last-synced', false); if(ls) $('lastSynced').textContent = 'Last synced ' + new Date(ls.value).toLocaleString(); }catch(e){}
+
+    const today = todayStr();
+    let changed = false;
+    tasks.forEach(t=>{ if(t.recurring && t.date !== today){ t.date = today; t.status='Pending'; changed = true; } });
+    if(changed) saveTasks();
+
+    updateGhStatus();
+    renderTeamControls();
+    renderMyTodoBtn();
+    renderProjectsRow();
+    renderStatusRow();
+    renderTasks();
+    renderLog();
+    renderStats();
+  }
+
+  function updateGhStatus(){
+    const dot = $('statusDot'), text = $('statusText');
+    if(ghConfig && ghConfig.token && ghConfig.owner && ghConfig.repo){
+      dot.className = 'dot ok'; text.textContent = 'Connected — ' + ghConfig.owner + '/' + ghConfig.repo;
+    } else { dot.className = 'dot'; text.textContent = 'Not connected to GitHub'; }
+  }
+
+  // ---------- team ----------
+  function renderTeamControls(){
+    const actingSel = $('actingAs'), assigneeSel = $('fAssignee'), listEl = $('teamList');
+    actingSel.innerHTML = '<option value="">— none —</option>';
+    assigneeSel.innerHTML = '<option value="">Assign to — optional</option>';
+    team.forEach(m=>{
+      const o1 = document.createElement('option'); o1.value = m.id; o1.textContent = `${m.name} — ${m.authority}`;
+      if(m.id === actingAsId) o1.selected = true;
+      actingSel.appendChild(o1);
+      const o2 = document.createElement('option'); o2.value = m.id; o2.textContent = m.name;
+      assigneeSel.appendChild(o2);
+    });
+
+    const admin = isAdmin();
+    $('teamAdminNote').style.display = admin ? 'none' : 'block';
+    $('addMemberRow').style.display = admin ? 'flex' : 'none';
+
+    listEl.innerHTML = team.length ? '' : '<div class="empty">No team members yet.</div>';
+    team.forEach(m=>{
+      const row = document.createElement('div');
+      row.className = 'member-row';
+      row.innerHTML = `
+        <div class="member-info">
+          <div class="member-name">${escapeHtml(m.name)}</div>
+          <div class="member-desig">${escapeHtml(m.designation||'—')} · <span class="auth-tag">${escapeHtml(m.authority)}</span></div>
+        </div>
+        ${admin ? `<button class="icon-btn" data-id="${m.id}" data-act="del-member" title="Remove" aria-label="Remove">✕</button>` : ''}
+      `;
+      listEl.appendChild(row);
+    });
+  }
+
+  $('actingAs').addEventListener('change', function(){
+    actingAsId = this.value; saveActingAs(actingAsId);
+    renderTeamControls(); renderMyTodoBtn(); renderTasks();
+  });
+
+  function renderMyTodoBtn(){
+    const btn = $('myTodoBtn');
+    if(!actingAsId){ myOnly = false; btn.disabled = true; btn.title = 'Pick who you\'re acting as first'; }
+    else { btn.disabled = false; btn.title = ''; }
+    btn.className = 'pill' + (myOnly ? ' active' : '');
+  }
+  $('myTodoBtn').addEventListener('click', function(){
+    if(!actingAsId) return;
+    myOnly = !myOnly;
+    renderMyTodoBtn(); renderTasks();
+  });
+
+  function renderWorkload(){
+    const today = todayStr();
+    const rows = team.map(m=>{
+      const mine = tasks.filter(t=>t.assignee===m.id);
+      const open = mine.filter(t=>t.status!=='Completed');
+      const completedToday = log.filter(e=> e.performedBy===memberLabel(m.id) && (e.completedAt||'').slice(0,10)===today);
+      const overdue = open.filter(t=> new Date(t.date+'T'+t.time+':00') < new Date());
+      return { m, open: open.length, overdue: overdue.length, completedToday: completedToday.length };
+    }).sort((a,b)=> b.open - a.open);
+
+    const unassignedOpen = tasks.filter(t=>!t.assignee && t.status!=='Completed').length;
+
+    $('workloadList').innerHTML = rows.map(r=>`
+      <div class="member-row">
+        <div class="member-info">
+          <div class="member-name">${escapeHtml(r.m.name)}</div>
+          <div class="member-desig">${escapeHtml(r.m.designation||'—')} · <span class="auth-tag">${escapeHtml(r.m.authority)}</span></div>
+        </div>
+        <div class="mono" style="font-size:12px;text-align:right;color:var(--muted);">
+          ${r.open} open${r.overdue ? ` · <span style="color:var(--danger);">${r.overdue} overdue</span>` : ''}<br>${r.completedToday} done today
+        </div>
+      </div>
+    `).join('') + (unassignedOpen ? `<div class="member-row"><div class="member-info"><div class="member-name">Unassigned</div></div><div class="mono" style="font-size:12px;color:var(--muted);">${unassignedOpen} open</div></div>` : '');
+  }
+
+  $('openWorkload').addEventListener('click', function(){ renderWorkload(); $('workloadOverlay').classList.add('open'); });
+  $('closeWorkload').addEventListener('click', ()=> $('workloadOverlay').classList.remove('open'));
+  $('workloadOverlay').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('open'); });
+
+  $('openTeam').addEventListener('click', ()=> $('teamOverlay').classList.add('open'));
+  $('closeTeam').addEventListener('click', ()=> $('teamOverlay').classList.remove('open'));
+  $('teamOverlay').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('open'); });
+
+  $('addMemberBtn').addEventListener('click', async function(){
+    if(!isAdmin()){ alert('Only someone Acting as an Admin can edit the team roster.'); return; }
+    const name = $('mName').value.trim();
+    if(!name) return;
+    team.push({ id:'m'+Date.now(), name, designation: $('mDesig').value.trim(), authority: $('mAuthority').value });
+    await saveTeam();
+    $('mName').value=''; $('mDesig').value='';
+    renderTeamControls();
+  });
+
+  $('teamList').addEventListener('click', async function(e){
+    const btn = e.target.closest('[data-act="del-member"]');
+    if(!btn) return;
+    if(!isAdmin()){ alert('Only someone Acting as an Admin can edit the team roster.'); return; }
+    team = team.filter(m=>m.id!==btn.dataset.id);
+    if(actingAsId === btn.dataset.id){ actingAsId=''; saveActingAs(''); }
+    await saveTeam();
+    renderTeamControls(); renderTasks();
+  });
+
+  // ---------- projects ----------
+  function renderProjectsRow(){
+    const row = $('projectsRow'); const sel = $('fProject');
+    row.innerHTML = ''; sel.innerHTML = projects.length ? '' : '<option value="">Unassigned</option>';
+
+    const allPill = document.createElement('button');
+    allPill.type='button'; allPill.className = 'pill' + (activeProject==='all' ? ' active':'');
+    allPill.textContent = 'All projects';
+    allPill.onclick = ()=>{ activeProject='all'; renderProjectsRow(); renderTasks(); };
+    row.appendChild(allPill);
+
+    projects.forEach(p=>{
+      const pill = document.createElement('button');
+      pill.type='button'; pill.className = 'pill' + (activeProject===p.id ? ' active':'');
+      pill.textContent = p.name;
+      pill.onclick = ()=>{ activeProject=p.id; renderProjectsRow(); renderTasks(); };
+      row.appendChild(pill);
+      const opt = document.createElement('option'); opt.value = p.id; opt.textContent = p.name;
+      sel.appendChild(opt);
+    });
+
+    const addWrap = document.createElement('div');
+    addWrap.className = 'add-project';
+    addWrap.innerHTML = `<input type="text" id="newProjInput" placeholder="New project name">
+      <button type="button" class="icon-btn" id="addProjBtn" title="Add project" aria-label="Add project">+</button>`;
+    row.appendChild(addWrap);
+
+    $('addProjBtn').onclick = async function(){
+      const input = $('newProjInput'); const name = input.value.trim();
+      if(!name) return;
+      projects.push({ id:'p'+Date.now(), name });
+      await saveProjects(); renderProjectsRow();
+    };
+  }
+
+  function renderStatusRow(){
+    const row = $('statusRow'); row.innerHTML = '';
+    ['all', ...STATUSES].forEach(s=>{
+      const chip = document.createElement('button');
+      chip.type='button'; chip.className = 'chip' + (activeStatus===s ? ' active':'');
+      chip.textContent = s==='all' ? 'All statuses' : s;
+      chip.onclick = ()=>{ activeStatus = s; renderStatusRow(); renderTasks(); };
+      row.appendChild(chip);
+    });
+  }
+
+  function projectName(id){
+    if(!id) return 'Unassigned';
+    const p = projects.find(p=>p.id===id);
+    return p ? p.name : 'Unassigned';
+  }
+
+  // ---------- tasks ----------
+  function renderTasks(){
+    const list = $('taskList'); const now = new Date();
+    let filtered = tasks.filter(t=>{
+      if(activeProject!=='all' && (t.project||'')!==activeProject) return false;
+      if(activeStatus!=='all' && t.status!==activeStatus) return false;
+      if(myOnly && t.assignee !== actingAsId) return false;
+      return true;
+    });
+    filtered.sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time));
+    list.innerHTML = ''; let openCount = 0;
+
+    if(filtered.length === 0){
+      list.innerHTML = myOnly
+        ? '<div class="empty">Nothing assigned to you right now.</div>'
+        : '<div class="empty">Nothing here. Add a document, review, or call above.</div>';
+    }
+
+    filtered.forEach(t=>{
+      const dt = new Date(t.date + 'T' + t.time + ':00');
+      const diffMin = (dt - now) / 60000;
+      const done = t.status === 'Completed';
+      const overdue = !done && diffMin < 0;
+      const soon = !done && diffMin >= 0 && diffMin <= 15;
+      if(!done) openCount++;
+      const color = TYPE_META[t.type] || TYPE_META.Other;
+      const isCall = t.type === 'Client Call' || t.type === 'DEC Call';
+      const assignee = t.assignee ? memberLabel(t.assignee) : null;
+
+      const row = document.createElement('div');
+      row.className = 'task' + (done?' done':'') + (overdue?' overdue':'') + (soon?' soon':'');
+      row.innerHTML = `
+        <span class="time mono">${t.time}</span>
+        <div class="task-main">
+          <div class="task-top">
+            <span class="tag" style="background:${hexToRgba(color,.2)};color:${color};">${t.type}</span>
+            <span class="proj-tag">${escapeHtml(projectName(t.project))}</span>
+            ${t.recurring ? '<span class="badge" style="color:var(--muted)">↻ daily</span>' : ''}
+            ${overdue ? '<span class="badge">OVERDUE</span>' : ''}
+          </div>
+          <div class="title${done?' strike':''}">${escapeHtml(t.title)}</div>
+          <div class="assignee">
+            Assigned to
+            <select class="status-select" data-id="${t.id}" data-act="reassign" style="margin-left:4px;">
+              <option value="">— unassigned —</option>
+              ${team.map(m=>`<option value="${m.id}" ${t.assignee===m.id?'selected':''}>${escapeHtml(m.name)}</option>`).join('')}
+            </select>
+          </div>
+          ${t.party ? `<div class="party">Contact: ${escapeHtml(t.party)}</div>` : ''}
+          ${t.notes ? `<div class="notes">${escapeHtml(t.notes)}</div>` : ''}
+        </div>
+        <div class="task-actions">
+          <select class="status-select" data-id="${t.id}" data-act="status">
+            ${STATUSES.map(s=>`<option value="${s}" ${s===t.status?'selected':''}>${s}</option>`).join('')}
+          </select>
+          ${isCall ? `<button class="icon-btn" data-act="logcall" data-id="${t.id}" title="Log a call attempt" aria-label="Log call">☎</button>` : ''}
+          <button class="icon-btn" data-act="delete" data-id="${t.id}" title="Delete" aria-label="Delete">✕</button>
+        </div>
+      `;
+      list.appendChild(row);
+    });
+
+    $('taskCount').textContent = openCount + ' open';
+  }
+
+  $('taskList').addEventListener('change', function(e){
+    const statusSel = e.target.closest('select[data-act="status"]');
+    const reassignSel = e.target.closest('select[data-act="reassign"]');
+
+    if(statusSel){
+      const task = tasks.find(t=>t.id===statusSel.dataset.id);
+      if(!task) return;
+      const wasDone = task.status === 'Completed';
+      task.status = statusSel.value;
+      if(task.status === 'Completed' && !wasDone){
+        log.push({ hash: shortHash(), project: projectName(task.project), title: task.title, type: task.type,
+          note: 'Marked completed', performedBy: memberLabel(actingAsId) || null, completedAt: new Date().toISOString() });
+        saveLog(); renderLog();
+      }
+      saveTasks(); renderTasks(); renderStats();
+    }
+
+    if(reassignSel){
+      const task = tasks.find(t=>t.id===reassignSel.dataset.id);
+      if(!task) return;
+      const fromLabel = task.assignee ? memberLabel(task.assignee) : 'unassigned';
+      task.assignee = reassignSel.value;
+      const toLabel = task.assignee ? memberLabel(task.assignee) : 'unassigned';
+      log.push({ hash: shortHash(), project: projectName(task.project), title: task.title, type: task.type,
+        note: `Assigned from ${fromLabel} to ${toLabel}`, performedBy: memberLabel(actingAsId) || null,
+        completedAt: new Date().toISOString() });
+      saveTasks(); saveLog(); renderTasks(); renderLog(); renderStats();
+    }
+  });
+
+  $('taskList').addEventListener('click', function(e){
+    const btn = e.target.closest('.icon-btn');
+    if(!btn) return;
+    const id = btn.dataset.id, act = btn.dataset.act;
+    const task = tasks.find(t=>t.id===id);
+    if(!task) return;
+
+    if(act === 'delete'){
+      tasks = tasks.filter(t=>t.id!==id);
+      saveTasks(); renderTasks(); renderStats();
+    } else if(act === 'logcall'){
+      log.push({ hash: shortHash(), project: projectName(task.project), title: task.title, type: task.type,
+        note: `Follow-up call logged${task.party ? ' — ' + task.party : ''}`,
+        performedBy: memberLabel(actingAsId) || null, completedAt: new Date().toISOString() });
+      saveLog(); renderLog();
+    }
+  });
+
+  $('addForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    const title = $('fTitle').value.trim();
+    if(!title) return;
+    const task = {
+      id: 't' + Date.now(), title, project: $('fProject').value || '', type: $('fType').value,
+      party: $('fParty').value.trim(), status: $('fStatus').value, assignee: $('fAssignee').value || '',
+      date: $('fDate').value || todayStr(), time: $('fTime').value,
+      recurring: $('fRecurring').checked, notes: $('fNotes').value.trim(),
+      addedBy: memberLabel(actingAsId) || null
+    };
+    tasks.push(task);
+    saveTasks(); renderTasks(); renderStats();
+    e.target.reset(); $('fDate').value = todayStr();
+  });
+
+  // ---------- stats ----------
+  function renderStats(){
+    const now = new Date(); const today = todayStr();
+    const open = tasks.filter(t=>t.status!=='Completed');
+    const pendingCalls = open.filter(t=> (t.type==='Client Call'||t.type==='DEC Call') && t.status==='Pending');
+    const dueToday = open.filter(t=> t.date===today);
+    const inReview = open.filter(t=> t.status==='In Review');
+    const overdue = open.filter(t=> new Date(t.date+'T'+t.time+':00') < now);
+
+    const stats = [
+      { n: open.length, l: 'Open items' },
+      { n: pendingCalls.length, l: 'Pending calls', alert: pendingCalls.length>0 },
+      { n: dueToday.length, l: 'Due today' },
+      { n: inReview.length, l: 'In review' },
+      { n: overdue.length, l: 'Overdue', alert: overdue.length>0 }
+    ];
+    $('statsRow').innerHTML = stats.map(s=>`
+      <div class="stat${s.alert?' alert':''}"><div class="n mono">${s.n}</div><div class="l">${s.l}</div></div>
+    `).join('');
+  }
+
+  // ---------- log ----------
+  function renderLog(){
+    const list = $('logList'), empty = $('logEmpty');
+    if(log.length===0){ list.innerHTML=''; empty.style.display='block'; return; }
+    empty.style.display='none';
+    const sorted = [...log].sort((a,b)=> new Date(b.completedAt) - new Date(a.completedAt));
+    list.innerHTML = sorted.map(e=>`
+      <div class="log-entry">
+        <span class="hash">${e.hash}</span>
+        <div class="log-body">
+          <div class="log-msg">${escapeHtml(e.project ? '['+e.project+'] ' : '')}${escapeHtml(e.title)}</div>
+          <div class="log-meta">${escapeHtml(e.type||'')} · ${escapeHtml(e.note||'')}${e.performedBy ? ' · by ' + escapeHtml(e.performedBy) : ''} · ${new Date(e.completedAt).toLocaleString()}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // ---------- clock + reminders ----------
+  function tickClock(){
+    const now = new Date();
+    $('clockTime').textContent = now.toLocaleTimeString();
+    $('clockDate').textContent = now.toLocaleDateString(undefined, {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+  }
+  tickClock(); setInterval(tickClock, 1000);
+
+  function checkReminders(){
+    const now = new Date();
+    tasks.forEach(t=>{
+      if(t.status==='Completed' || notified.has(t.id)) return;
+      const dt = new Date(t.date + 'T' + t.time + ':00');
+      const diffMin = (dt - now) / 60000;
+      if(diffMin <= 0 && diffMin > -1){
+        notified.add(t.id);
+        if(window.Notification && Notification.permission === 'granted'){
+          new Notification('Due now: ' + t.title, { body: t.type + (t.party ? ' · ' + t.party : '') + ' · ' + t.time });
+        }
+      }
+    });
+    renderTasks(); renderStats();
+  }
+  setInterval(checkReminders, 15000);
+
+  $('notifBtn').addEventListener('click', function(){
+    if(!window.Notification){ alert('Notifications are not supported in this browser.'); return; }
+    Notification.requestPermission().then(p=>{
+      $('notifBtn').textContent = p==='granted' ? 'Reminders enabled ✓' : 'Enable reminders';
+    });
+  });
+
+  // ---------- GitHub settings modal ----------
+  $('openSettings').addEventListener('click', function(){
+    if(ghConfig){
+      $('gOwner').value = ghConfig.owner||''; $('gRepo').value = ghConfig.repo||'';
+      $('gPath').value = ghConfig.path||'activity-log.json'; $('gBranch').value = ghConfig.branch||'main';
+      $('gLogsFolder').value = ghConfig.logsFolder||'logs/';
+    }
+    $('overlay').classList.add('open');
+  });
+  $('closeSettings').addEventListener('click', ()=> $('overlay').classList.remove('open'));
+  $('overlay').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('open'); });
+
+  $('saveSettings').addEventListener('click', async function(){
+    const cfg = {
+      token: $('gToken').value.trim() || (ghConfig ? ghConfig.token : ''),
+      owner: $('gOwner').value.trim(), repo: $('gRepo').value.trim(),
+      path: $('gPath').value.trim() || 'activity-log.json', branch: $('gBranch').value.trim() || 'main',
+      logsFolder: ($('gLogsFolder').value.trim() || 'logs/').replace(/\/?$/, '/')
+    };
+    if(!cfg.token || !cfg.owner || !cfg.repo){ alert('Token, owner, and repo are required.'); return; }
+    ghConfig = cfg; await saveGhConfig(cfg); updateGhStatus(); $('overlay').classList.remove('open');
+  });
+
+  // ---------- GitHub sync ----------
+  function b64EncodeUnicode(str){
+    return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (m,p1)=> String.fromCharCode('0x'+p1)));
+  }
+
+  async function syncDailyLog(headers){
+    const today = todayStr();
+    const todaysEntries = log.filter(e => (e.completedAt||'').slice(0,10) === today);
+    const openToday = tasks.filter(t => t.status !== 'Completed' && t.date === today)
+      .map(t => ({ project: projectName(t.project), title: t.title, type: t.type, time: t.time, status: t.status,
+        party: t.party || null, assignee: t.assignee ? memberLabel(t.assignee) : null }));
+
+    const dailyPath = `${ghConfig.logsFolder || 'logs/'}${today}.json`;
+    const dailyUrl = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${encodeURIComponent(dailyPath)}`;
+
+    let sha = null, existing = { date: today, entries: [] };
+    const getRes = await fetch(`${dailyUrl}?ref=${encodeURIComponent(ghConfig.branch)}`, { headers });
+    if(getRes.status === 200){
+      const data = await getRes.json(); sha = data.sha;
+      try{ existing = JSON.parse(decodeURIComponent(escape(atob(data.content.replace(/\n/g,''))))); }
+      catch(e){ existing = { date: today, entries: [] }; }
+    } else if(getRes.status !== 404){
+      const errBody = await getRes.json().catch(()=>({})); throw new Error(errBody.message || `Daily log GET failed (${getRes.status})`);
+    }
+
+    const existingHashes = new Set((existing.entries||[]).map(e=>e.hash));
+    const merged = [...(existing.entries||[]), ...todaysEntries.filter(e=>!existingHashes.has(e.hash))];
+
+    const dailyPayload = { date: today, entries: merged, stillOpen: openToday, updatedAt: new Date().toISOString() };
+    const dailyBody = { message: `Daily log — ${today}`, content: b64EncodeUnicode(JSON.stringify(dailyPayload, null, 2)), branch: ghConfig.branch };
+    if(sha) dailyBody.sha = sha;
+
+    const putRes = await fetch(dailyUrl, { method:'PUT', headers:{...headers,'Content-Type':'application/json'}, body: JSON.stringify(dailyBody) });
+    if(!putRes.ok){ const errBody = await putRes.json().catch(()=>({})); throw new Error(errBody.message || `Daily log PUT failed (${putRes.status})`); }
+  }
+
+  $('syncBtn').addEventListener('click', async function(){
+    if(!ghConfig || !ghConfig.token){ $('openSettings').click(); return; }
+    const btn = $('syncBtn'); const originalText = btn.textContent;
+    btn.textContent = 'Syncing…'; btn.disabled = true;
+
+    const apiBase = `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${encodeURIComponent(ghConfig.path)}`;
+    const headers = { 'Authorization': `Bearer ${ghConfig.token}`, 'Accept': 'application/vnd.github+json' };
+
+    try{
+      let sha = null;
+      const getRes = await fetch(`${apiBase}?ref=${encodeURIComponent(ghConfig.branch)}`, { headers });
+      if(getRes.status === 200){ const data = await getRes.json(); sha = data.sha; }
+      else if(getRes.status !== 404){ const errBody = await getRes.json().catch(()=>({})); throw new Error(errBody.message || `GET failed (${getRes.status})`); }
+
+      const payload = { projects, team, tasks, activityLog: log, exportedAt: new Date().toISOString() };
+      const body = { message: `Update activity log — ${new Date().toISOString()}`,
+        content: b64EncodeUnicode(JSON.stringify(payload, null, 2)), branch: ghConfig.branch };
+      if(sha) body.sha = sha;
+
+      const putRes = await fetch(apiBase, { method:'PUT', headers:{...headers,'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      if(!putRes.ok){ const errBody = await putRes.json().catch(()=>({})); throw new Error(errBody.message || `PUT failed (${putRes.status})`); }
+
+      await syncDailyLog(headers);
+
+      const now = new Date().toISOString();
+      await window.storage.set('last-synced', now, false);
+      $('lastSynced').textContent = 'Last synced ' + new Date(now).toLocaleString();
+      $('statusDot').className = 'dot ok';
+      $('statusText').textContent = 'Synced — ' + ghConfig.owner + '/' + ghConfig.repo;
+    } catch(err){
+      $('statusDot').className = 'dot err';
+      $('statusText').textContent = 'Sync failed: ' + err.message;
+      console.error(err);
+    } finally {
+      btn.textContent = originalText; btn.disabled = false;
+    }
+  });
+
+  // ---------- init ----------
+  $('fDate').value = todayStr();
+  loadAll();
+})();
+</script>
+</body>
+</html>
